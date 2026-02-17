@@ -9,7 +9,7 @@ A simple Go service that counts the number of days since a given date. Built wit
 Add this to your `README.md` (replace `YOUR_DOMAIN` and `YOUR_DATE`):
 
 ```markdown
-![Unemployed Days](https://YOUR_DOMAIN/api/v1/unemploy/svg?start=2025-01-01)
+![Unemployed Days](https://YOUR_DOMAIN/api/v1/unemploy/badge?start=2025-01-01)
 ```
 
 Example:
