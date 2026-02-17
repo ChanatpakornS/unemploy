@@ -12,7 +12,6 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/limiter"
-	"github.com/gofiber/template/html/v3"
 
 	"unemployed/internal/unemploy"
 	"unemployed/internal/validator"
@@ -20,12 +19,9 @@ import (
 
 func main() {
 	validator := validator.NewStructValidator()
-	engine := html.New("./internal/views", ".html")
 
 	app := fiber.New(fiber.Config{
 		AppName:         "unemployed",
-		Views:           engine,
-		ViewsLayout:     "layouts/main",
 		StructValidator: validator,
 		ServerHeader:    "",
 	})
