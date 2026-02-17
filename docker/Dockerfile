@@ -14,7 +14,6 @@ FROM alpine:3.21
 WORKDIR /app
 
 COPY --from=builder /app/unemployed .
-COPY --from=builder /app/internal/views ./internal/views
 
 EXPOSE 8000
 
