@@ -6,8 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/helmet"
+	"github.com/gofiber/fiber/v3/middleware/limiter"
 	"github.com/gofiber/template/html/v3"
 
 	"unemployed/internal/unemploy"
@@ -23,7 +27,23 @@ func main() {
 		Views:           engine,
 		ViewsLayout:     "layouts/main",
 		StructValidator: validator,
+		ServerHeader:    "",
 	})
+
+	// Security headers
+	app.Use(helmet.New())
+
+	// Rate limiting: 60 requests per minute per IP
+	app.Use(limiter.New(limiter.Config{
+		Max:        60,
+		Expiration: 1 * time.Minute,
+	}))
+
+	// CORS
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{"GET"},
+	}))
 
 	unemploy.SetupRoutes(app)
 
