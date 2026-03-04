@@ -20,10 +20,11 @@ Example:
 
 ### API Endpoints
 
-| Endpoint                                    | Description                             |
-| ------------------------------------------- | --------------------------------------- |
-| `GET /api/v1/unemploy?start=YYYY-MM-DD`     | Returns an HTML page with the day count |
-| `GET /api/v1/unemploy/svg?start=YYYY-MM-DD` | Returns an SVG badge (for embedding)    |
+| Endpoint                                                           | Description                                     |
+| ------------------------------------------------------------------ | ----------------------------------------------- |
+| `GET /api/v1/unemploy?start=YYYY-MM-DD`                            | Returns an HTML page with the day count         |
+| `GET /api/v1/unemploy/badge?start=YYYY-MM-DD`                      | Returns an SVG badge (for embedding)            |
+| `GET /api/v1/unemploy/wallpaper?start=YYYY-MM-DD&width=W&height=H` | Returns an SVG wallpaper with custom dimensions |
 
 ### Run Locally
 
@@ -31,7 +32,24 @@ Example:
 go run cmd/main.go
 ```
 
-Then visit: `http://localhost:8000/api/v1/unemploy?start=2025-01-01`
+Then visit:
+
+- Card: `http://localhost:8000/api/v1/unemploy?start=2025-01-01`
+- Badge: `http://localhost:8000/api/v1/unemploy/badge?start=2025-01-01`
+- Wallpaper: `http://localhost:8000/api/v1/unemploy/wallpaper?start=2025-01-01&width=1920&height=1080`
+
+#### Wallpaper Parameters
+
+- `start`: Start date in YYYY-MM-DD format (required)
+- `width`: Wallpaper width in pixels (required, min: 800, max: 7680)
+- `height`: Wallpaper height in pixels (required, min: 600, max: 4320)
+
+Common resolutions:
+
+- 1920x1080 (Full HD)
+- 2560x1440 (2K)
+- 3840x2160 (4K)
+- 1366x768 (Laptop)
 
 ### Run with Docker
 
