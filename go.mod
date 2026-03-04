@@ -3,9 +3,11 @@ module unemployed
 go 1.25.0
 
 require (
+	github.com/fogleman/gg v1.3.0
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/gofiber/fiber/v3 v3.0.0
-	github.com/gofiber/template/html/v3 v3.0.2
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
+	golang.org/x/image v0.36.0
 )
 
 require (
@@ -14,7 +16,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/gofiber/schema v1.6.0 // indirect
-	github.com/gofiber/template/v2 v2.1.0 // indirect
 	github.com/gofiber/utils/v2 v2.0.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.3 // indirect

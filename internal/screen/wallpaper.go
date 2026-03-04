@@ -1,61 +1,117 @@
 package screen
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
+	"image"
+	"image/color"
+	"image/png"
+	"math"
+
+	"github.com/fogleman/gg"
+	"github.com/golang/freetype/truetype"
+	"golang.org/x/image/font/gofont/goregular"
 )
 
 func GenerateWallpaper(
 	width int,
 	height int,
 	days int,
-	cssFrames string,
-	textFrames string,
-) string {
-	// Calculate responsive sizing based on dimensions
+) ([]byte, error) {
+	// Create a new context
+	dc := gg.NewContext(width, height)
+
+	// Draw gradient background
+	drawGradientBackground(dc, width, height)
+
+	// Load font
+	font, err := truetype.Parse(goregular.TTF)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse font: %w", err)
+	}
+
+	// Calculate responsive sizing
 	fontSize := calculateFontSize(width, height)
-	headerFontSize := fontSize / 5
-	footerFontSize := fontSize / 5
+	headerFontSize := float64(fontSize) / 5.0
+	footerFontSize := float64(fontSize) / 5.0
 
-	centerX := width / 2
-	centerY := height / 2
-	headerY := centerY - fontSize
-	footerY := centerY + fontSize + headerFontSize + 20
+	centerX := float64(width) / 2.0
+	centerY := float64(height) / 2.0
 
-	svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" role="img" aria-label="unemployed for %d days">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%%" stop-color="#0f172a"/>
-      <stop offset="50%%" stop-color="#1e293b"/>
-      <stop offset="100%%" stop-color="#334155"/>
-    </linearGradient>
-    <filter id="glow">
-      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  <style>
-    @keyframes show { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes hide { 0%% { opacity: 0; } 10%% { opacity: 1; } 90%% { opacity: 1; } 100%% { opacity: 0; } }
-%s  </style>
-  <rect width="%d" height="%d" fill="url(#bg)"/>
-  <g font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif">
-    <text x="%d" y="%d" text-anchor="middle" font-size="%d" fill="#94a3b8" letter-spacing="2" font-weight="300">I'VE BEEN UNEMPLOYED FOR</text>
-%s    <text x="%d" y="%d" text-anchor="middle" font-size="%d" fill="#64748b" letter-spacing="1" font-weight="300">DAYS</text>
-  </g>
-</svg>`,
-		width, height, days,
-		cssFrames,
-		width, height,
-		centerX, headerY, headerFontSize,
-		textFrames,
-		centerX, footerY, footerFontSize,
-	)
+	// Draw header text: "I'VE BEEN UNEMPLOYED FOR"
+	headerY := centerY - float64(fontSize)
+	face := truetype.NewFace(font, &truetype.Options{Size: headerFontSize})
+	dc.SetFontFace(face)
+	dc.SetColor(color.RGBA{148, 163, 184, 255}) // #94a3b8
+	dc.DrawStringAnchored("I'VE BEEN UNEMPLOYED FOR", centerX, headerY, 0.5, 0.5)
 
-	return svg
+	// Draw main day counter with glow effect
+	daysY := centerY + float64(fontSize)/3.0
+	daysFace := truetype.NewFace(font, &truetype.Options{Size: float64(fontSize)})
+	dc.SetFontFace(daysFace)
+
+	// Draw glow effect (multiple passes with decreasing opacity)
+	daysText := fmt.Sprintf("%d", days)
+	for i := range 8 {
+		offset := float64(i) * 0.5
+		alpha := uint8(20 - i*2)
+		dc.SetColor(color.RGBA{241, 245, 249, alpha})
+		dc.DrawStringAnchored(daysText, centerX+offset, daysY+offset, 0.5, 0.5)
+		dc.DrawStringAnchored(daysText, centerX-offset, daysY+offset, 0.5, 0.5)
+		dc.DrawStringAnchored(daysText, centerX+offset, daysY-offset, 0.5, 0.5)
+		dc.DrawStringAnchored(daysText, centerX-offset, daysY-offset, 0.5, 0.5)
+	}
+
+	// Draw main text on top
+	dc.SetColor(color.RGBA{241, 245, 249, 255}) // #f1f5f9
+	dc.DrawStringAnchored(daysText, centerX, daysY, 0.5, 0.5)
+
+	// Draw footer text: "DAYS"
+	footerY := centerY + float64(fontSize) + headerFontSize + 20
+	footerFace := truetype.NewFace(font, &truetype.Options{Size: footerFontSize})
+	dc.SetFontFace(footerFace)
+	dc.SetColor(color.RGBA{100, 116, 139, 255}) // #64748b
+	dc.DrawStringAnchored("DAYS", centerX, footerY, 0.5, 0.5)
+
+	// Encode to PNG
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, dc.Image()); err != nil {
+		return nil, fmt.Errorf("failed to encode PNG: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+func drawGradientBackground(dc *gg.Context, width int, height int) {
+	// Create gradient from top-left to bottom-right
+	// Colors: #0f172a -> #1e293b -> #334155
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	for y := range height {
+		for x := range width {
+			// Calculate position in gradient (0.0 to 1.0)
+			t := math.Sqrt(float64(x*x+y*y)) / math.Sqrt(float64(width*width+height*height))
+
+			var r, g, b uint8
+			if t < 0.5 {
+				// Interpolate between #0f172a and #1e293b
+				factor := t * 2.0
+				r = uint8(15 + (30-15)*factor)
+				g = uint8(23 + (41-23)*factor)
+				b = uint8(42 + (59-42)*factor)
+			} else {
+				// Interpolate between #1e293b and #334155
+				factor := (t - 0.5) * 2.0
+				r = uint8(30 + (51-30)*factor)
+				g = uint8(41 + (65-41)*factor)
+				b = uint8(59 + (85-59)*factor)
+			}
+
+			img.Set(x, y, color.RGBA{r, g, b, 255})
+		}
+	}
+
+	dc.DrawImage(img, 0, 0)
 }
 
 func calculateFontSize(width int, height int) int {
@@ -77,51 +133,4 @@ func calculateFontSize(width int, height int) int {
 	}
 
 	return fontSize
-}
-
-func generateWallpaperFrames(days int, width int, height int) (string, string) {
-	fontSize := calculateFontSize(width, height)
-	centerX := width / 2
-	centerY := height / 2
-	daysY := centerY + fontSize/3
-
-	totalFrames := 60
-	totalDuration := 2.0
-	frameDuration := totalDuration / float64(totalFrames)
-
-	var frames []int
-	seen := map[int]bool{}
-	for i := 1; i <= totalFrames; i++ {
-		t := float64(i) / float64(totalFrames)
-		// Ease out exponential
-		eased := 1.0 - (1.0-t)*(1.0-t)*(1.0-t)
-		val := int(eased * float64(days))
-		if seen[val] && i != totalFrames {
-			continue
-		}
-		seen[val] = true
-		frames = append(frames, val)
-	}
-	frames[len(frames)-1] = days
-
-	actualFrames := len(frames)
-	var css, texts strings.Builder
-
-	for i, val := range frames {
-		delay := float64(i) * frameDuration
-		if i == actualFrames-1 {
-			css.WriteString(fmt.Sprintf(
-				"    .f%d { animation: show %.3fs ease forwards; animation-delay: %.3fs; opacity: 0; }\n",
-				i, frameDuration, delay))
-		} else {
-			css.WriteString(fmt.Sprintf(
-				"    .f%d { animation: hide %.3fs ease forwards; animation-delay: %.3fs; opacity: 0; }\n",
-				i, frameDuration, delay))
-		}
-		texts.WriteString(fmt.Sprintf(
-			`      <text class="f%d" x="%d" y="%d" text-anchor="middle" dominant-baseline="central" font-size="%d" font-weight="700" fill="#f1f5f9" filter="url(#glow)">%d</text>`+"\n",
-			i, centerX, daysY, fontSize, val))
-	}
-
-	return css.String(), texts.String()
 }

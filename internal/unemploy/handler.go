@@ -186,81 +186,19 @@ func UnemployWallpaper(c fiber.Ctx) error {
 
 	days := int(diff.Hours() / 24)
 
-	cssFrames, textFrames := generateWallpaperFrames(days, wallpaperRequest.Width, wallpaperRequest.Height)
-
-	svg := screen.GenerateWallpaper(
+	pngBytes, err := screen.GenerateWallpaper(
 		wallpaperRequest.Width,
 		wallpaperRequest.Height,
 		days,
-		cssFrames,
-		textFrames,
 	)
+	if err != nil {
+		log.Error("Failed to generate wallpaper", err)
+		return c.Status(fiber.ErrInternalServerError.Code).JSON(fiber.Map{
+			"message": "Failed to generate wallpaper",
+		})
+	}
 
-	c.Set("Content-Type", "image/svg+xml")
+	c.Set("Content-Type", "image/png")
 	c.Set("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400")
-	return c.SendString(svg)
-}
-
-func generateWallpaperFrames(days int, width int, height int) (string, string) {
-	fontSize := calculateWallpaperFontSize(width, height)
-	centerX := width / 2
-	centerY := height / 2
-	daysY := centerY + fontSize/3
-
-	totalFrames := 60
-	totalDuration := 2.0
-	frameDuration := totalDuration / float64(totalFrames)
-
-	var frames []int
-	seen := map[int]bool{}
-	for i := 1; i <= totalFrames; i++ {
-		t := float64(i) / float64(totalFrames)
-		eased := 1.0 - math.Pow(2, -10*t)
-		val := int(math.Round(eased * float64(days)))
-		if seen[val] && i != totalFrames {
-			continue
-		}
-		seen[val] = true
-		frames = append(frames, val)
-	}
-	frames[len(frames)-1] = days
-
-	actualFrames := len(frames)
-	var css, texts strings.Builder
-
-	for i, val := range frames {
-		delay := float64(i) * frameDuration
-		if i == actualFrames-1 {
-			css.WriteString(fmt.Sprintf(
-				"    .f%d { animation: show %.3fs ease forwards; animation-delay: %.3fs; opacity: 0; }\n",
-				i, frameDuration, delay))
-		} else {
-			css.WriteString(fmt.Sprintf(
-				"    .f%d { animation: hide %.3fs ease forwards; animation-delay: %.3fs; opacity: 0; }\n",
-				i, frameDuration, delay))
-		}
-		texts.WriteString(fmt.Sprintf(
-			`      <text class="f%d" x="%d" y="%d" text-anchor="middle" dominant-baseline="central" font-size="%d" font-weight="700" fill="#f1f5f9" filter="url(#glow)">%d</text>`+"\n",
-			i, centerX, daysY, fontSize, val))
-	}
-
-	return css.String(), texts.String()
-}
-
-func calculateWallpaperFontSize(width int, height int) int {
-	smallerDim := width
-	if height < width {
-		smallerDim = height
-	}
-
-	fontSize := smallerDim / 8
-
-	if fontSize < 48 {
-		fontSize = 48
-	}
-	if fontSize > 200 {
-		fontSize = 200
-	}
-
-	return fontSize
+	return c.Send(pngBytes)
 }
